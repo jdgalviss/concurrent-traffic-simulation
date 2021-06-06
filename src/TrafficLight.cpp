@@ -23,6 +23,8 @@ void MessageQueue<T>::send(T &&msg)
 {
     // Ensure access is locked
     std::lock_guard<std::mutex> uLock(_mutex);
+    _queue.clear();
+  
     // add msg to queue
     _queue.push_back(std::move(msg));
     _cond.notify_one(); // notify client after pushing new Vehicle into vector
@@ -60,15 +62,17 @@ void TrafficLight::simulate()
 void TrafficLight::cycleThroughPhases()
 {
     std::chrono::time_point<std::chrono::system_clock> lastUpdate = std::chrono::system_clock::now();
+  	// Get random number to toggle traffic light
+    std::random_device rd;
+    std::mt19937 eng(rd());
+    std::uniform_real_distribution<> distr(4000.0, 6000.0);
+    double time_threshold = distr(eng);
     while (true)
     {
         // Measure the time since last traffic light update
-        long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - lastUpdate).count();
-        // Get random number to toggle traffic light
-        std::random_device rd;
-        std::mt19937 eng(rd());
-        std::uniform_real_distribution<> distr(4.0, 6.0);
-        if (timeSinceLastUpdate >= distr(eng))
+        long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
+        
+        if (timeSinceLastUpdate >= time_threshold)
         {
             _currentPhase = _currentPhase == TrafficLightPhase::red ? TrafficLightPhase::green : TrafficLightPhase::red; //toggle
             // Send Update method
